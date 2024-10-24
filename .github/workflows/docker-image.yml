@@ -1,0 +1,35 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - uses: actions/checkout@v4
+
+    # Step 2: Build the Docker image from the Dockerfile
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+
+    # Step 3: Run the container (so that we can generate a docker-compose.yml)
+    - name: Run the container
+      run: docker run -d --name my-container-name my-image-name:$(date +%s)
+
+    # Step 4: Generate the docker-compose.yml from the running container
+    - name: Generate docker-compose.yml
+      run: |
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/red5d/docker-autocompose my-container-name > docker-compose.yml
+
+    # Step 5: Save the generated docker-compose.yml as an artifact for future use
+    - name: Upload generated docker-compose.yml as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: docker-compose.yml
+        path: docker-compose.yml
